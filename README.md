@@ -14,7 +14,9 @@ Licznik turniejowy (blind timer) do pokera, który **automatycznie podnosi stawk
   - edytor struktury, 4 gotowe szablony i generator struktury;
   - wpisowe, re-buy, add-on, prowizja i podział nagród;
   - gracze: eliminacje, miejsca, losowanie miejsc przy stole i cofanie ostatniej akcji;
+  - kalkulator żetonów: Twój zestaw kolorów i nominałów, rozdanie stacka na gracza, kontrola, na ilu graczy wystarczy;
   - motywy sukna, ustawienia dźwięku i głosu, kopia zapasowa danych.
+- Przypomnienie o wymianie żetonów (chip race) na ekranie przerwy i głosem
 - Stan zapisuje się automatycznie, więc odświeżenie strony nie przerywa turnieju
 - Blokada wygaszania ekranu (Screen Wake Lock)
 
@@ -36,4 +38,4 @@ Po pierwszym otwarciu aplikacja działa także bez internetu.
 
 ## Aktualizacja
 
-Po zmianie `index.html` podnieś numer wersji w `sw.js` (`const CACHE = 'licznik-v2'`), żeby zainstalowane aplikacje pobrały nową wersję.
+Po zmianie `index.html` podnieś numer wersji w `sw.js` (np. `const CACHE = 'licznik-v3'`), żeby zainstalowane aplikacje pobrały nową wersję.

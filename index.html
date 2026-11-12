@@ -81,6 +81,11 @@ body.isbreak #main::before{content:'♣'}
 #bv em{font-style:normal;color:var(--gold);opacity:.8;font-weight:500}
 #ante{font-family:var(--num);font-size:min(5.6vw,6.6vh);color:var(--accent);margin-top:1.4vmin;min-height:1em;display:flex;align-items:center;justify-content:center;gap:.35em}
 #ante .chip{font-size:.9em}
+#ante svg + svg{margin-left:.1em}
+.cu{display:inline-flex;align-items:center;gap:.3em;flex-wrap:wrap;justify-content:center}
+.cu .chip{font-size:1.5em}
+#ante .cu .chip{font-size:1.3em}
+#b3 .chip{font-size:1.1em}
 #next{margin-top:1.8vmin;font-size:clamp(14px,3vmin,32px);color:var(--muted);display:flex;align-items:center;gap:.5em;background:var(--card);border:1px solid var(--line);padding:.35em 1em;border-radius:99px}
 #next b{color:var(--fg);font-weight:600}
 #next .chip{font-size:1em}
@@ -100,7 +105,7 @@ body.isbreak #main::before{content:'♣'}
 .st span{display:flex;align-items:center;justify-content:center;gap:.4em;font-size:clamp(10px,1.7vmin,15px);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st b{display:block;font-family:var(--num);font-size:clamp(18px,4vmin,42px);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st.wide b{color:var(--accent)}
-#hint{position:fixed;left:50%;bottom:20vh;transform:translateX(-50%);background:rgba(0,0,0,.6);border:1px solid var(--line);padding:10px 20px 10px 12px;border-radius:99px;color:var(--fg);font-size:clamp(13px,2.4vmin,22px);white-space:nowrap;pointer-events:none;display:flex;align-items:center;gap:10px;z-index:5}
+#hint{margin-top:1.6vmin;background:rgba(0,0,0,.6);border:1px solid var(--line);padding:10px 20px 10px 12px;border-radius:99px;color:var(--fg);font-size:clamp(13px,2.4vmin,22px);white-space:nowrap;pointer-events:none;display:flex;align-items:center;gap:10px}
 #hint .chip{font-size:1.8em}
 #pausedTag{position:fixed;top:16vh;left:50%;transform:translateX(-50%) rotate(-6deg);border:.18em solid var(--warn);color:var(--warn);font-family:var(--deco);font-weight:700;letter-spacing:.3em;padding:.2em 1em .2em 1.3em;border-radius:12px;font-size:clamp(18px,5vmin,52px);display:none;background:rgba(0,0,0,.45);z-index:6}
 body.paused #pausedTag{display:block}
@@ -251,6 +256,7 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
     <div id="blinds"><small>BLINDY</small><div id="bv"></div></div>
     <div id="ante"></div>
     <div id="next"></div>
+    <div id="hint"></div>
   </div>
   <div id="side">
     <div id="ladder"></div>
@@ -258,7 +264,6 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
   </div>
 </div>
 <div id="pausedTag">PAUZA</div>
-<div id="hint"></div>
 
 <div id="banner">
   <div class="cards"></div>
@@ -357,7 +362,7 @@ function setHTML(sel, html){ const e = $(sel); if(e._h !== html){ e._h = html; e
 function P(sb, bb, ante, dur){ return {type:'play', sb, bb, ante, dur}; }
 function B(dur, note){ return {type:'break', dur, note: note || ''}; }
 const STANDARD = [P(25,50,0,15),P(50,100,0,15),P(75,150,0,15),P(100,200,0,15),B(10,'Koniec re-buyów'),
-  P(150,300,300,15),P(200,400,400,15),P(300,600,600,15),P(400,800,800,15),B(10,'Wymiana żetonów 25'),
+  P(150,300,300,15),P(200,400,400,15),P(300,600,600,15),P(400,800,800,15),B(10),
   P(500,1000,1000,15),P(600,1200,1200,15),P(800,1600,1600,15),P(1000,2000,2000,15),B(10),
   P(1500,3000,3000,15),P(2000,4000,4000,15),P(3000,6000,6000,15),P(4000,8000,8000,15)];
 
@@ -385,6 +390,137 @@ const TEMPLATES = {
   home:     {name:'Domówka (20 min, stack 3 000)', stack:3000, levels:() => generate({stack:3000, players:8, hours:3, levelMin:20, breakMin:10})}
 };
 
+/* ================= ŻETONY ================= */
+const DEFAULT_CHIPSET = [
+  {name:'Zielony', color:'#1f8a4c', value:25, count:0},
+  {name:'Niebieski', color:'#1f4fc4', value:50, count:0},
+  {name:'Czarny', color:'#1a1a1d', value:100, count:0},
+  {name:'Fioletowy', color:'#6b2fb3', value:500, count:0},
+  {name:'Żółty', color:'#f2c230', value:1000, count:0}
+];
+function chipSet(){ return (S.chips.set || []).filter(c => c.value > 0).slice().sort((a, b) => a.value - b.value); }
+const chipLbl = v => v >= 1000 && v % 1000 === 0 ? (v / 1000) + 'K' : String(v);
+function isLight(hex){ const h = hex.replace('#', ''); const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16); return (r*299 + g*587 + b*114) / 1000 > 150; }
+function chipC(c){
+  const light = isLight(c.color), edge = light ? '#1d1d1d' : '#f4f1e8', lbl = chipLbl(c.value), fs = lbl.length > 3 ? 22 : lbl.length > 2 ? 27 : 32;
+  return `<svg class="chip" viewBox="0 0 100 100" aria-label="${esc(c.name)} ${c.value}">
+    <circle cx="50" cy="50" r="48" fill="${c.color}"/>
+    <circle cx="50" cy="50" r="41" fill="none" stroke="${edge}" stroke-width="12" stroke-dasharray="21.47 10.73"/>
+    <circle cx="50" cy="50" r="31" fill="${c.color}" stroke="rgba(0,0,0,.35)" stroke-width="3"/>
+    <circle cx="50" cy="50" r="27" fill="none" stroke="${edge}" stroke-width="1.6" stroke-dasharray="3 3"/>
+    <path d="M14 38 A38 38 0 0 1 86 38" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="4"/>
+    <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2"/>
+    <text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="Oswald,Arial Narrow,Arial" font-weight="700" font-size="${fs}" fill="${edge}">${lbl}</text></svg>`;
+}
+// Propozycja rozdania stacka na jednego gracza
+function suggestDist(stack, set){
+  const vals = set.map(c => c.value);
+  let use = vals.filter(v => v <= stack / 4); if(!use.length) use = vals.slice(0, 1);
+  const k = use.length, w = use.map((_, i) => Math.pow(1.6, i)), W = w.reduce((a, b) => a + b, 0);
+  const cnt = {}; let rem = stack;
+  for(let i = 0; i < k - 1; i++){
+    let n = Math.round(w[i] / W * stack / use[i]);
+    n = Math.min(16, Math.max(4, Math.round(n / 2) * 2));
+    if(n * use[i] > rem) n = Math.floor(rem / use[i]);
+    cnt[use[i]] = n; rem -= n * use[i];
+  }
+  const last = use[k - 1]; cnt[last] = Math.floor(rem / last); rem -= cnt[last] * last;
+  for(let i = k - 2; i >= 0 && rem > 0; i--){ const n = Math.floor(rem / use[i]); cnt[use[i]] += n; rem -= n * use[i]; }
+  return cnt;
+}
+// Kiedy zdjąć najmniejsze żetony (wymiana / chip race)
+function colorUps(){
+  const set = chipSet(), L = S.structure.levels, out = [];
+  if(set.length < 2) return out;
+  const okFrom = d => { // pierwszy indeks, od którego wszystkie stawki są wielokrotnością d
+    let first = L.length;
+    for(let j = L.length - 1; j >= 0; j--){ const l = L[j]; if(l.type === 'play' && [l.sb, l.bb, l.ante || 0].some(x => x % d)) break; first = j; }
+    return first;
+  };
+  let prev = -1;
+  for(let a = 0; a < set.length - 1; a++){
+    const into = set[a + 1], i0 = Math.max(prev, okFrom(into.value));
+    if(i0 >= L.length) break;
+    let at = -1; for(let j = Math.max(i0, 0); j < L.length; j++) if(L[j].type === 'break'){ at = j; break; }
+    if(at < 0) break;
+    prev = at;
+    const g = out.find(x => x.at === at);
+    if(g){ g.remove.push(set[a]); g.into = into; } else out.push({at, remove:[set[a]], into});
+  }
+  return out;
+}
+function breakNo(idx){ let n = 0; for(let j = 0; j <= idx; j++) if(S.structure.levels[j] && S.structure.levels[j].type === 'break') n++; return n; }
+function colorUpAt(idx){ return S.chips.remind ? colorUps().find(x => x.at === idx) : null; }
+function colorUpHTML(cu){ return `<span class="cu">Zdejmij ${cu.remove.map(chipC).join('')} <span style="opacity:.7">→</span> wymień na ${chipC(cu.into)}</span>`; }
+function colorUpSay(cu){ return `Wymiana żetonów. Zdejmijcie ${cu.remove.map(c => c.name.toLowerCase() + ' ' + c.value).join(' i ')}.`; }
+
+function renderChipsTab(b){
+  const set = S.chips.set, sorted = chipSet(), k = calc();
+  const players = S.chips.players || k.total || 9, stack = S.tour.stack;
+  const per = S.chips.per || {};
+  const perSum = sorted.reduce((a, c) => a + (per[c.value] || 0) * c.value, 0);
+  const perCount = sorted.reduce((a, c) => a + (per[c.value] || 0), 0);
+  const haveCounts = sorted.some(c => c.count > 0);
+  let maxP = Infinity; sorted.forEach(c => { const n = per[c.value] || 0; if(n && c.count > 0) maxP = Math.min(maxP, Math.floor((c.count || 0) / n)); });
+  const cus = colorUps();
+  const badStruct = sorted.length ? S.structure.levels.filter(l => l.type === 'play' && [l.sb, l.bb, l.ante || 0].some(x => x % sorted[0].value)).length : 0;
+  b.innerHTML = `<div class="wrap">
+    <h3>Mój zestaw żetonów</h3>
+    <div class="card" style="overflow-x:auto"><table class="lv"><thead><tr><th></th><th>Kolor</th><th>Nazwa</th><th>Nominał</th><th>Sztuk w zestawie</th><th></th></tr></thead><tbody>
+      ${set.map((c, i) => `<tr><td style="font-size:34px">${chipC(c)}</td>
+        <td><input type="color" data-ci="${i}" data-cf="color" value="${c.color}" style="width:46px;height:40px;padding:2px;border-radius:8px;border:1px solid var(--line);background:none"></td>
+        <td><input type="text" data-ci="${i}" data-cf="name" value="${esc(c.name)}"></td>
+        <td><input type="number" data-ci="${i}" data-cf="value" value="${c.value}"></td>
+        <td><input type="number" data-ci="${i}" data-cf="count" value="${c.count || ''}" placeholder="opcjonalnie"></td>
+        <td class="acts"><button data-cdel="${i}">✕</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="cAdd">+ Dodaj żeton</button><button class="btn sm" id="cReset">Przywróć mój zestaw</button></div>
+    <p class="note">Wpisz, ile sztuk każdego koloru masz, a kalkulator sprawdzi, na ilu graczy wystarczy.</p></div>
+
+    <h3>Rozdanie na jednego gracza</h3>
+    <div class="row">
+      <label class="f">Liczba graczy<input type="number" id="cP" value="${players}"></label>
+      <label class="f">Stack startowy<input type="number" data-bind="tour.stack" value="${stack}"></label>
+      <button class="btn sm acc" id="cCalc" style="align-self:flex-end">🪄 Zaproponuj rozdanie</button>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table class="lv"><thead><tr><th></th><th>Na gracza</th><th>Wartość</th>${haveCounts ? '<th>Potrzeba / masz</th>' : '<th>Razem dla stołu</th>'}</tr></thead><tbody>
+      ${sorted.map(c => { const n = per[c.value] || 0, need = n * players, ok = !(c.count > 0) || need <= c.count;
+        return `<tr><td style="font-size:34px;white-space:nowrap">${chipC(c)}</td>
+          <td><input type="number" data-per="${c.value}" value="${n}" style="max-width:90px"></td>
+          <td class="ix">${fmt(n * c.value)}</td>
+          <td class="ix" style="color:${ok ? 'inherit' : 'var(--danger)'}">${c.count > 0 ? `${fmt(need)} / ${fmt(c.count)}${ok ? ' ✓' : ' ⚠'}` : fmt(need) + ' szt.'}</td></tr>`; }).join('')}
+      </tbody></table>
+      <p style="font-size:18px;margin:12px 0 4px"><b>Razem: ${fmt(perSum)}</b> z ${fmt(stack)} · ${perCount} żetonów na gracza
+        ${perSum === stack ? '<span class="pill ok">✓ zgadza się</span>' : `<span class="pill bad">${perSum > stack ? 'za dużo o ' + fmt(perSum - stack) : 'brakuje ' + fmt(stack - perSum)}</span>`}</p>
+      ${haveCounts && isFinite(maxP) ? `<p class="note">Zestaw wystarczy na <b>${maxP}</b> graczy${maxP < players ? ' – <span style="color:var(--danger)">za mało dla ' + players + ' graczy</span>' : ''}${maxP > players ? ` (zapas na ${maxP - players} re-buy/add-on)` : ''}.</p>` : ''}
+      <div style="font-size:30px;line-height:1.1;margin-top:10px;display:flex;flex-wrap:wrap;gap:12px">${sorted.filter(c => per[c.value]).map(c => `<span style="display:inline-flex;align-items:center;gap:4px">${chipC(c)}<span style="font-family:var(--num);font-size:20px">× ${per[c.value]}</span></span>`).join('')}</div>
+    </div>
+
+    <h3>Wymiana żetonów (chip race)</h3>
+    <div class="card">
+      <label class="c"><input type="checkbox" data-bind="chips.remind" ${S.chips.remind ? 'checked' : ''}> Przypominaj na ekranie i głosem podczas przerwy</label>
+      ${cus.length ? cus.map(cu => `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:17px;padding:8px 0;border-top:1px solid var(--line)">
+          <b style="min-width:90px">☕ Przerwa ${breakNo(cu.at)}</b><span style="font-size:18px">${colorUpHTML(cu)}</span></div>`).join('')
+        : '<p class="note">W obecnej strukturze nie ma przerwy, na której można zdjąć najmniejsze żetony.</p>'}
+      <p class="note">Żetony zdejmuje się, gdy od tej chwili żadna stawka nie wymaga już tego nominału. Pełne kwoty wymień 1:1 (np. 4 × 25 = 1 × 100). Resztki rozstrzyga chip race: za każdą resztkę gracz dostaje kartę, a najwyższe karty dostają brakujący żeton wyższego nominału.</p>
+      ${badStruct ? `<p class="note" style="color:var(--warn)">⚠ ${badStruct} poziom(ów) w strukturze ma stawki niepodzielne przez najmniejszy żeton (${sorted[0].value}).</p>` : ''}
+    </div>
+  </div>`;
+  const syncChip = () => { const s2 = chipSet(); if(s2.length) S.structure.chip = s2[0].value; };
+  b.querySelectorAll('[data-ci]').forEach(inp => inp.onchange = () => {
+    const c = set[+inp.dataset.ci], f = inp.dataset.cf;
+    c[f] = (f === 'value' || f === 'count') ? Math.max(0, +inp.value || 0) : inp.value;
+    syncChip(); save(); renderAdmin(); render();
+  });
+  b.querySelectorAll('[data-cdel]').forEach(x => x.onclick = () => { set.splice(+x.dataset.cdel, 1); syncChip(); save(); renderAdmin(); render(); });
+  $('#cAdd').onclick = () => { set.push({name:'Nowy', color:'#c0392b', value:5000, count:0}); save(); renderAdmin(); };
+  $('#cReset').onclick = async () => { if(await ask('Przywrócić zestaw: zielony 25, niebieski 50, czarny 100, fioletowy 500, żółty 1000?', 'Przywróć')){ S.chips.set = clone(DEFAULT_CHIPSET); syncChip(); save(); renderAdmin(); render(); } };
+  $('#cP').onchange = () => { S.chips.players = Math.max(1, +$('#cP').value || 1); save(); renderAdmin(); };
+  $('#cCalc').onclick = () => { S.chips.players = Math.max(1, +$('#cP').value || 1); S.chips.per = suggestDist(S.tour.stack, chipSet()); save(); renderAdmin(); toast('Zaproponowano rozdanie'); };
+  b.querySelectorAll('[data-per]').forEach(inp => inp.onchange = () => { S.chips.per = {...(S.chips.per || {}), [inp.dataset.per]: Math.max(0, +inp.value || 0)}; save(); renderAdmin(); });
+}
+
 /* ================= STAN ================= */
 function defaultState(){
   return {
@@ -394,6 +530,7 @@ function defaultState(){
       rebuy:{on:true, cost:50, chips:10000, until:4}, addon:{on:true, cost:50, chips:10000},
       payouts:'50,30,20', players:[] },
     clock:{ status:'idle', idx:0, startedAt:0, pausedAt:0, pausedMs:0, warned:-1 },
+    chips:{ set: clone(DEFAULT_CHIPSET), per: suggestDist(10000, clone(DEFAULT_CHIPSET)), players:0, remind:true },
     settings:{ pin:'1234', pinChanged:false, theme:'dark', sound:true, voice:true, voiceName:'', pitch:1.1, tick:true, warnSec:60, volume:0.8 }
   };
 }
@@ -403,7 +540,7 @@ function load(){
     const raw = localStorage.getItem(KEY); if(!raw) return null;
     const d = JSON.parse(raw), def = defaultState();
     return {...def, ...d, structure:{...def.structure, ...d.structure}, tour:{...def.tour, ...d.tour},
-      clock:{...def.clock, ...d.clock}, settings:{...def.settings, ...d.settings}};
+      clock:{...def.clock, ...d.clock}, chips:{...def.chips, ...(d.chips || {})}, settings:{...def.settings, ...d.settings}};
   }catch(e){ return null; }
 }
 let saveT = 0, storageOK = true;
@@ -523,8 +660,9 @@ function announce(first){
   levelSound();
   $('#banner .bchip').innerHTML = chip(l.type === 'break' ? 'brk' : (first ? 'gold' : 'bb'));
   if(l.type === 'break'){
-    $('#b1').textContent = 'PRZERWA'; $('#b2').textContent = `${l.dur} MIN`; $('#b3').textContent = l.note || `Dalej: ${blindsTxt(n)}`;
-    setTimeout(() => say(`Przerwa, ${l.dur} minut. ${l.note || ''}`), 700);
+    $('#b1').textContent = 'PRZERWA'; $('#b2').textContent = `${l.dur} MIN`; const cu = colorUpAt(S.clock.idx);
+    if(cu) $('#b3').innerHTML = `<span style="display:inline-flex;align-items:center;gap:.3em">${colorUpHTML(cu)}</span>`; else $('#b3').textContent = l.note || `Dalej: ${blindsTxt(n)}`;
+    setTimeout(() => say(`Przerwa, ${l.dur} minut. ${cu ? colorUpSay(cu) : (l.note || '')}`), 700);
   }else{
     $('#b1').textContent = first ? 'START TURNIEJU' : `POZIOM ${playNo(S.clock.idx)} · NOWE BLINDY`;
     $('#b2').textContent = blindsTxt(l); $('#b3').textContent = l.ante ? `ANTE ${fmt(l.ante)}` : '';
@@ -596,7 +734,9 @@ function render(){
   setHTML('#bv', l.type === 'break' ? `<span class="bg">${chip('brk')}PRZERWA</span>`
     : `<span class="bg">${chip('sb')}${fmt(l.sb)}</span><em>/</em><span class="bg">${chip('bb')}${fmt(l.bb)}</span>`);
   $('#blinds small').textContent = l.type === 'break' ? (l.note || 'CZAS NA ODPOCZYNEK').toUpperCase() : 'SMALL BLIND  ·  BIG BLIND';
-  setHTML('#ante', l.type === 'play' && l.ante ? `${chip('ante')}ANTE ${fmt(l.ante)}` : '');
+  const cu = l.type === 'break' ? colorUpAt(c.idx) : null;
+  if(cu) $('#blinds small').textContent = 'WYMIANA ŻETONÓW';
+  setHTML('#ante', cu ? colorUpHTML(cu) : (l.type === 'play' && l.ante ? `${chip('ante')}ANTE ${fmt(l.ante)}` : ''));
   setHTML('#next', n.type === 'break' ? `${chip('brk')}Dalej: <b>PRZERWA ${n.dur} min</b>` : `Dalej: <b>${blindsTxt(n)}${n.ante ? ' · ante ' + fmt(n.ante) : ''}</b>`);
   $('#hint').style.display = c.status === 'idle' ? 'flex' : 'none';
   // rozpiska kolejnych poziomów z godziną startu
@@ -605,7 +745,7 @@ function render(){
     const x = level(i); if(x.type === 'play') pn++;
     const when = c.status === 'running' ? hhmm(t0) : '+' + mmss(t0 - now()).replace(/^0/, '');
     rows += x.type === 'break'
-      ? `<div class="lr brk"><span class="ln">☕</span><span>Przerwa ${x.dur}′</span><span class="la"></span><span class="lt">${when}</span></div>`
+      ? `<div class="lr brk"><span class="ln">☕</span><span>Przerwa ${x.dur}′${colorUpAt(i) ? ' · wymiana' : ''}</span><span class="la"></span><span class="lt">${when}</span></div>`
       : `<div class="lr"><span class="ln">P${pn}</span><span>${fmt(x.sb)} / ${fmt(x.bb)}</span><span class="la">${x.ante ? 'A ' + fmt(x.ante) : ''}</span><span class="lt">${when}</span></div>`;
     t0 += durMs(i);
   }
@@ -679,7 +819,7 @@ function pinPrompt(){
 
 /* ================= PANEL ADMINA ================= */
 let adminOpen = false, unlocked = false, tab = 'ster', undoStack = [];
-const TABS = [['ster','⏱ Sterowanie'],['str','📊 Struktura'],['tur','🏆 Turniej'],['gr','👥 Gracze'],['ust','⚙ Ustawienia']];
+const TABS = [['ster','⏱ Sterowanie'],['str','📊 Struktura'],['tur','🏆 Turniej'],['zet','🪙 Żetony'],['gr','👥 Gracze'],['ust','⚙ Ustawienia']];
 $('#gear').onclick = async () => { unlockAudio(); if(!unlocked){ if(!(await pinPrompt())) return; unlocked = true; } openAdmin(); };
 $('#closeAdmin').onclick = () => { adminOpen = false; $('#admin').classList.remove('show'); render(); };
 $('#lockBtn').onclick = () => { unlocked = false; $('#closeAdmin').onclick(); toast('Panel zablokowany'); };
@@ -842,6 +982,7 @@ function renderAdmin(){
       modal(`<p><b>Losowanie miejsc</b></p>${Array.from({length:tables}, (_, ti) => `<div class="card"><b>Stół ${ti + 1}</b><ol>${a.slice(ti * per, ti * per + per).map(n => `<li>${esc(n)}</li>`).join('')}</ol></div>`).join('')}`, [{t:'OK', v:true, cls:'acc'}]); };
     const cl = $('#clearP'); if(cl) cl.onclick = async () => { if(await ask('Usunąć wszystkich graczy?', 'Usuń', 'red')){ pushUndo(); t.players = []; save(); renderAdmin(); render(); } };
   }
+  if(tab === 'zet') renderChipsTab(b);
   if(tab === 'ust'){
     const s = S.settings;
     b.innerHTML = `<div class="wrap">
@@ -882,7 +1023,7 @@ function renderAdmin(){
     $('#bkShow').onclick = () => { $('#bk').value = JSON.stringify(S); };
     $('#bkCopy').onclick = () => { $('#bk').value = JSON.stringify(S); try{ navigator.clipboard.writeText($('#bk').value).then(() => toast('Skopiowano'), () => { $('#bk').select(); toast('Zaznaczono – skopiuj ręcznie'); }); }catch(e){ $('#bk').select(); toast('Zaznaczono – skopiuj ręcznie'); } };
     $('#bkLoad').onclick = async () => { try{ const d = JSON.parse($('#bk').value); if(!d.structure || !d.tour) throw 0; if(!(await ask('Wczytać dane? Obecny stan zostanie zastąpiony.', 'Wczytaj'))) return;
-      const def = defaultState(); S = {...def, ...d, structure:{...def.structure, ...d.structure}, tour:{...def.tour, ...d.tour}, clock:{...def.clock, ...d.clock}, settings:{...def.settings, ...d.settings}}; save(); renderAdmin(); render(); toast('Wczytano'); }catch(e){ toast('Nieprawidłowe dane'); } };
+      const def = defaultState(); S = {...def, ...d, structure:{...def.structure, ...d.structure}, tour:{...def.tour, ...d.tour}, clock:{...def.clock, ...d.clock}, chips:{...def.chips, ...(d.chips || {})}, settings:{...def.settings, ...d.settings}}; save(); renderAdmin(); render(); toast('Wczytano'); }catch(e){ toast('Nieprawidłowe dane'); } };
     $('#factory').onclick = async () => { if(await ask('Usunąć wszystko i przywrócić ustawienia fabryczne (PIN wróci do 1234)?', 'Przywróć', 'red')){ S = defaultState(); save(); renderAdmin(); render(); } };
   }
   // generyczne wiązanie pól
