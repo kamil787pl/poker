@@ -126,11 +126,12 @@ body.paused #pausedTag{display:block}
 body.paused #timer{opacity:.55}
 body.isbreak #bv{color:var(--ok)}
 
-@media (orientation:portrait), (max-width:699px){
+@media (orientation:portrait), (max-width:559px){
+  .st.opt{display:none}
   #ladder .lr:nth-of-type(n+4){display:none}
   #now{display:none}
 }
-@media (orientation:landscape) and (min-width:700px){
+@media (orientation:landscape) and (min-width:560px){
   #screen{grid-template-columns:1fr minmax(270px,30vw);grid-template-rows:auto 1fr}
   #top{grid-column:1/3}
   #side{justify-content:center}
@@ -226,8 +227,8 @@ table.lv .ix{font-family:var(--num);font-size:16px;white-space:nowrap}
 table.lv .acts{white-space:nowrap;text-align:right}
 table.lv .acts button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;width:34px;height:34px;margin-left:2px}
 .brk td{color:var(--ok)}
-.pl{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
-.pl .nm{flex:1;min-width:60px;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.pl .nm{flex:1 1 120px;min-width:60px;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pl.out .nm{text-decoration:line-through;opacity:.55}
 .pl .tag{font-size:12px;color:var(--muted);white-space:nowrap}
 .pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:12px;background:var(--card);border:1px solid var(--line);color:var(--muted)}
@@ -266,7 +267,7 @@ body.light #timer .d{background-image:linear-gradient(180deg,#5a420f 0%,#8a6200 
 body.light #timer{filter:none}
 body.contrast #timer .d{background:none;color:#fff} body.contrast #timer.warn .d{color:var(--warn)} body.contrast #timer.danger .d{color:var(--danger)}
 #timer{font-size:min(27vw,30vh)}
-@media (orientation:landscape) and (min-width:700px){ #timer{font-size:min(17.5vw,37vh)} }
+@media (orientation:landscape) and (min-width:560px){ #timer{font-size:min(17.5vw,37vh)} }
 /* cienka złota linia postępu z rombem */
 #bar{height:3px;background:rgba(226,189,98,.18);overflow:visible;box-shadow:none;border-radius:0;margin:2.4vmin 0 2.4vmin}
 #bar i{position:relative;background:linear-gradient(90deg,transparent,var(--gold2) 15%,var(--gold));animation:none;border-radius:0}
@@ -309,6 +310,13 @@ body.isbreak #shuffle{display:block} body.isbreak #suitsrow{display:none}
 body.lessanim #timer .d.flip, body.lessanim .brand .chip, body.lessanim #shuffle svg, body.lessanim #bar i{animation:none}
 body.lessanim #banner .fly{transition:none}
 body.lessanim.final #screen::after{animation:none;opacity:.6}
+
+/* ===== DOPASOWANIE DO EKRANU ===== */
+#main{overflow:hidden}
+#mainIn{display:flex;flex-direction:column;align-items:center;justify-content:center;transform-origin:50% 50%;position:relative;z-index:1}
+#sideIn{display:flex;flex-direction:column;gap:1.2vmin;transform-origin:50% 0;width:100%}
+#side{overflow:hidden}
+@media (orientation:landscape) and (min-width:560px){ #side{display:flex;flex-direction:column;justify-content:center} #sideIn{transform-origin:50% 50%} }
 </style>
 </head>
 <body>
@@ -327,7 +335,7 @@ body.lessanim.final #screen::after{animation:none;opacity:.6}
       <button id="gear" aria-label="Panel administracyjny">⚙</button>
     </div>
   </div>
-  <div id="main">
+  <div id="main"><div id="mainIn">
     <div id="shuffle"></div>
     <div id="suitsrow"><span class="k">♠</span><span class="r">♥</span><span class="r">♦</span><span class="k">♣</span></div>
     <div id="timer">15:00</div>
@@ -336,11 +344,11 @@ body.lessanim.final #screen::after{animation:none;opacity:.6}
     <div id="ante"></div>
     <div id="next"></div>
     <div id="hint"></div>
-  </div>
-  <div id="side">
+  </div></div>
+  <div id="side"><div id="sideIn">
     <div id="ladder"></div>
     <div id="stats"></div>
-  </div>
+  </div></div>
 </div>
 <div id="pausedTag">PAUZA</div>
 
@@ -894,6 +902,26 @@ function chipFlight(l, idx){
   return maxDelay + .7;
 }
 
+
+/* ===== DOPASOWANIE ZAWARTOŚCI DO EKRANU ===== */
+function fitBox(outer, inner){
+  if(!outer || !inner) return;
+  inner.style.transform = 'none';
+  const oh = outer.clientHeight, ow = outer.clientWidth, ih = inner.scrollHeight, iw = inner.scrollWidth;
+  if(!oh || !ow) return;
+  const k = Math.min(1, oh / ih, ow / iw);
+  if(k < 1) inner.style.transform = `scale(${Math.max(.3, k * .98)})`;
+}
+let fitSig = '';
+function fitAll(force){
+  const sig = innerWidth + 'x' + innerHeight + '|' + $('#mainIn').innerText.length + '|' + $('#sideIn').innerText.length + '|' + document.body.className;
+  if(!force && sig === fitSig) return; fitSig = sig;
+  fitBox($('#main'), $('#mainIn'));
+  if(matchMedia('(orientation:landscape) and (min-width:560px)').matches) fitBox($('#side'), $('#sideIn')); else $('#sideIn').style.transform = 'none';
+}
+addEventListener('resize', () => fitAll(true));
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitAll(true));
+
 /* ================= WAKE LOCK / PEŁNY EKRAN ================= */
 let wakeLock = null, wakeState = 'nieaktywna';
 async function wake(){
@@ -973,15 +1001,16 @@ function render(){
   // statystyki
   const k = calc(), tb = timeToBreak(), st = [];
   if(k.total) st.push(['players','Gracze', `${k.alive} / ${k.total}`], ['avg','Średni stack', fmt(k.avg)]);
-  if(k.total && l.type === 'play' && l.bb) st.push(['chips','Średni stack w BB', (k.avg / l.bb).toFixed(1)]);
+  if(k.total && l.type === 'play' && l.bb) st.push(['chips','Średni stack w BB', (k.avg / l.bb).toFixed(1), 'opt']);
   if(k.total) st.push(['pool','Pula', money(k.pool)]);
-  if(k.rebuys || k.addons) st.push(['rebuy','Re-buy / Add-on', `${k.rebuys} / ${k.addons}`]);
-  if(k.total) st.push(['chips','Żetony w grze', fmt(k.chips)]);
+  if(k.rebuys || k.addons) st.push(['rebuy','Re-buy / Add-on', `${k.rebuys} / ${k.addons}`, 'opt']);
+  if(k.total) st.push(['chips','Żetony w grze', fmt(k.chips), 'opt']);
   st.push(['brk','Do przerwy', tb == null ? '–' : mmss(tb)]);
-  st.push(['time','Czas gry', hm(playedMs())]);
+  st.push(['time','Czas gry', hm(playedMs()), k.total ? 'opt' : '']);
   if(k.pays.length && k.total) st.push(['trophy', 'Nagrody ' + k.pays.slice(0, 3).map((_, i) => i + 1 + '.').join(' / '), k.pays.slice(0, 3).map(fmt).join(' / '), 'wide']);
   setHTML('#stats', st.map(([ic, a, b, w]) => `<div class="st ${w || ''}"><span>${icon(ic)}${a}</span><b>${b}</b></div>`).join(''));
   $('#results').classList.toggle('show', c.status === 'finished');
+  fitAll();
   if(adminOpen){
     $('#amini').innerHTML = `${mmss(rem)} · ${blindsTxt(l)}${l.ante ? ' (' + fmt(l.ante) + ')' : ''}<span>${{idle:'gotowy', running:'trwa', paused:'pauza', finished:'zakończony'}[c.status]}</span>`;
     const tb2 = document.querySelector('[data-act="toggle"]');
