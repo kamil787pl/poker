@@ -1,5 +1,5 @@
 // Service worker – pozwala działać licznikowi bez internetu.
-const CACHE = 'licznik-v5';
+const CACHE = 'licznik-v6';
 const SHELL = [
   './',
   './index.html',
