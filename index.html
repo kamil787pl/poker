@@ -98,7 +98,7 @@ body.isbreak #main::before{content:'♣'}
 #ante svg + svg{margin-left:.1em}
 .cu{display:inline-flex;align-items:center;gap:.3em;flex-wrap:wrap;justify-content:center}
 .cu .chip{font-size:1.5em}
-#ante .cu .chip{font-size:1.3em}
+#ante .cu{flex-wrap:nowrap;font-size:.8em;white-space:nowrap} #ante .cu .chip{font-size:1.3em}
 #b3 .chip{font-size:1.1em}
 #next{margin-top:1.8vmin;font-size:clamp(14px,3vmin,32px);color:var(--muted);display:flex;align-items:center;gap:.5em;background:var(--card);border:1px solid var(--line);padding:.35em 1em;border-radius:99px}
 #next b{color:var(--fg);font-weight:600}
@@ -248,6 +248,57 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
 .shake{animation:shake .3s}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 18px;border-radius:12px;z-index:80;font-size:15px;display:none;max-width:90vw;text-align:center;border:1px solid var(--gold2)}
+
+/* ===== ZEGAR KLAPKOWY ===== */
+#timer{--tile:#141414}
+#timer .d{display:inline-block;position:relative;color:#f6f1e3;background:linear-gradient(180deg,#262626 0%,#161616 49.5%,#0c0c0c 50.5%,#1b1b1b 100%);
+  border-radius:.07em;padding:.02em .05em 0;margin:0 .018em;box-shadow:0 .03em .06em rgba(0,0,0,.6), inset 0 0 0 .006em rgba(255,255,255,.08);transform-origin:50% 50%;text-shadow:none}
+#timer .d::after{content:'';position:absolute;left:0;right:0;top:50%;height:.012em;background:rgba(0,0,0,.75);box-shadow:0 .006em 0 rgba(255,255,255,.06)}
+#timer .c{display:inline-block;padding:0 .01em;transform:translateY(-.04em)}
+#timer .d.flip{animation:flipd .38s cubic-bezier(.3,.7,.3,1)}
+@keyframes flipd{0%{transform:perspective(5em) rotateX(-88deg);filter:brightness(.4)}60%{filter:brightness(1.15)}100%{transform:perspective(5em) rotateX(0)}}
+#timer.warn .d{color:var(--warn)} #timer.danger .d{color:var(--danger)}
+#timer.danger{animation:none} #timer.danger .d{animation:pulse 1s infinite}
+#timer.danger .d.flip{animation:flipd .38s cubic-bezier(.3,.7,.3,1), pulse 1s infinite}
+body.contrast #timer .d{background:#000;box-shadow:inset 0 0 0 .01em #555}
+#timer{font-size:min(23vw,27vh);white-space:nowrap}
+@media (orientation:landscape) and (min-width:700px){ #timer{font-size:min(14.5vw,31vh)} }
+
+/* ===== PULSUJĄCY RANT W OSTATNICH 10 S ===== */
+#screen::after{content:'';position:absolute;inset:calc(-1 * clamp(10px,2.2vmin,24px));border-radius:inherit;pointer-events:none;opacity:0;
+  border:clamp(10px,2.2vmin,24px) solid rgba(255,45,45,.55);box-shadow:0 0 4vmin rgba(255,40,40,.7), inset 0 0 4vmin rgba(255,40,40,.45)}
+body.final #screen::after{animation:railpulse 1s ease-in-out infinite}
+@keyframes railpulse{0%,100%{opacity:.15}50%{opacity:1}}
+
+/* ===== ŻETONY LECĄCE DO PULI ===== */
+#banner .pot{position:relative;width:0;height:min(22vw,26vh);margin-bottom:calc(min(3.4vw,4vh) * 2.6)}
+#banner .fly{position:absolute;left:0;bottom:0;width:1em;height:1em;font-size:min(13vw,15vh);margin-left:-.5em;
+  transition:transform .65s cubic-bezier(.18,.8,.3,1.05), opacity .2s;will-change:transform}
+#banner .fly .chip{width:1em;height:1em;font-size:1em;filter:drop-shadow(0 .05em .05em rgba(0,0,0,.6))}
+#banner .fly.flat .chip{transform:scaleY(.92)}
+#banner .btxt{transition:opacity .35s, transform .35s}
+#banner.wait .btxt{opacity:0;transform:translateY(2vh)}
+#banner .plbl{position:absolute;bottom:-1.7em;font-family:var(--num);font-size:min(3.4vw,4vh);color:var(--gold);letter-spacing:.15em;transform:translateX(-50%);white-space:nowrap;opacity:0;transition:opacity .3s}
+#banner.landed .plbl{opacity:1}
+#banner.flight #b2 .pay, #banner.flight #b3 .pay{display:none}
+
+/* ===== TASOWANIE KART W PRZERWIE ===== */
+#shuffle{display:none;position:relative;height:1.05em;width:3.2em;font-size:clamp(30px,7vmin,80px);margin:1vmin 0}
+body.isbreak #shuffle{display:block} body.isbreak #suitsrow{display:none}
+#shuffle svg{position:absolute;left:50%;bottom:0;width:.7em;height:1em;margin-left:-.35em;transform-origin:50% 100%;
+  animation:shuf 5s ease-in-out infinite;animation-delay:calc(var(--i) * .06s);filter:drop-shadow(0 .03em .05em rgba(0,0,0,.5))}
+@keyframes shuf{
+  0%,6%{transform:translate(0, calc(var(--i) * -.012em))}
+  18%,26%{transform:translate(calc(var(--s) * 1.05em), calc(var(--i) * -.012em)) rotate(calc(var(--s) * 9deg))}
+  40%,46%{transform:translate(0, calc(var(--i) * -.012em))}
+  60%,80%{transform:rotate(calc((var(--i) - 3.5) * 13deg)) translateY(-.06em)}
+  94%,100%{transform:translate(0, calc(var(--i) * -.012em))}
+}
+
+/* ===== OGRANICZ ANIMACJE ===== */
+body.lessanim #timer .d.flip, body.lessanim .brand .chip, body.lessanim #shuffle svg, body.lessanim #bar i{animation:none}
+body.lessanim #banner .fly{transition:none}
+body.lessanim.final #screen::after{animation:none;opacity:.6}
 </style>
 </head>
 <body>
@@ -267,6 +318,7 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
     </div>
   </div>
   <div id="main">
+    <div id="shuffle"></div>
     <div id="suitsrow"><span class="k">♠</span><span class="r">♥</span><span class="r">♦</span><span class="k">♣</span></div>
     <div id="timer">15:00</div>
     <div id="bar"><i></i></div>
@@ -284,8 +336,9 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
 
 <div id="banner">
   <div class="cards"></div>
+  <div class="pot"></div>
   <div class="bchip"></div>
-  <div class="t1" id="b1">NOWE BLINDY</div><div class="t2" id="b2"></div><div class="t3" id="b3"></div>
+  <div class="btxt"><div class="t1" id="b1">NOWE BLINDY</div><div class="t2" id="b2"></div><div class="t3" id="b3"></div></div>
 </div>
 <div id="results"></div>
 
@@ -606,7 +659,7 @@ function defaultState(){
       payouts:'50,30,20', players:[] },
     clock:{ status:'idle', idx:0, startedAt:0, pausedAt:0, pausedMs:0, warned:-1 },
     chips:{ set: clone(DEFAULT_CHIPSET), per: suggestDist(10000, clone(DEFAULT_CHIPSET)), players:0, remind:true },
-    settings:{ pin:'1234', pinChanged:false, theme:'dark', sound:true, voice:true, voiceName:'', pitch:1.1, tick:true, warnSec:60, volume:0.8 }
+    settings:{ pin:'1234', pinChanged:false, theme:'dark', sound:true, voice:true, voiceName:'', pitch:1.1, tick:true, clockTick:false, lessAnim:false, warnSec:60, volume:0.8 }
   };
 }
 let S = load() || defaultState();
@@ -688,6 +741,7 @@ function tick(){
     }
     const sec = Math.ceil(rem / 1000);
     if(S.settings.tick && sec <= 5 && sec >= 1 && sec !== lastTickSec){ lastTickSec = sec; beep(1000, .06, 'square', .25); }
+    else if(S.settings.clockTick && sec > 5 && sec !== lastTickSec){ lastTickSec = sec; clack(0); }
   }
   render();
 }
@@ -735,7 +789,11 @@ function announce(first){
   const l = level(S.clock.idx), n = level(S.clock.idx + 1);
   levelSound();
   const bg = l.type === 'play' ? payGroups(l.bb, S.clock.idx) : null;
+  const ban = $('#banner'); ban.classList.remove('wait', 'landed', 'flight'); $('#banner .pot').innerHTML = '';
+  $('#banner .cards').style.display = first ? '' : 'none';
+  $('#banner .bchip').style.display = '';
   $('#banner .bchip').innerHTML = l.type === 'break' ? chip('brk') : (bg ? chipC(bg[0].c) : chip(first ? 'gold' : 'bb'));
+  let textDelay = 0;
   if(l.type === 'break'){
     $('#b1').textContent = 'PRZERWA'; $('#b2').textContent = `${l.dur} MIN`; const cu = colorUpAt(S.clock.idx);
     if(cu) $('#b3').innerHTML = `<span style="display:inline-flex;align-items:center;gap:.3em">${colorUpHTML(cu)}</span>`; else $('#b3').textContent = l.note || `Dalej: ${blindsTxt(n)}`;
@@ -745,12 +803,84 @@ function announce(first){
     $('#b2').innerHTML = `<span class="bg">${payHTML(l.sb, S.clock.idx, 'sb')}${fmt(l.sb)}</span> / <span class="bg">${payHTML(l.bb, S.clock.idx, 'bb')}${fmt(l.bb)}</span>`;
     $('#b3').innerHTML = l.ante ? `${payHTML(l.ante, S.clock.idx, 'ante')} ANTE ${fmt(l.ante)}` : '';
     setTimeout(() => say(`${first ? 'Start turnieju. ' : 'Blindy w górę. '}${l.sb}, ${l.bb}${l.ante ? ', ante ' + l.ante : ''}`), 700);
+    if(!first && !lessAnim()){
+      $('#banner .bchip').style.display = 'none';
+      ban.classList.add('show', 'wait', 'flight');
+      textDelay = chipFlight(l, S.clock.idx);
+      if(textDelay){ setTimeout(() => ban.classList.add('landed'), textDelay * 1000 - 300); setTimeout(() => ban.classList.remove('wait'), textDelay * 1000); }
+      else { ban.classList.remove('wait', 'flight'); $('#banner .bchip').style.display = ''; }
+    }
   }
   if(navigator.vibrate) try{ navigator.vibrate([200,100,200]); }catch(e){}
   $('#banner').classList.add('show'); clearTimeout(bannerT);
-  bannerT = setTimeout(() => $('#banner').classList.remove('show'), 5000);
+  bannerT = setTimeout(() => $('#banner').classList.remove('show'), 5000 + textDelay * 1000);
 }
 $('#banner').onclick = () => $('#banner').classList.remove('show');
+
+
+/* ===== ANIMACJE ===== */
+const lessAnim = () => !!S.settings.lessAnim;
+function setTimer(str){
+  const tm = $('#timer');
+  if(tm._s === str) return;
+  if(!tm._s || tm._s.length !== str.length){
+    tm.innerHTML = [...str].map(ch => ch === ':' ? '<span class="c">:</span>' : `<span class="d">${ch}</span>`).join('');
+  }else{
+    [...str].forEach((ch, i) => { const el = tm.children[i]; if(el.textContent !== ch){ el.textContent = ch;
+      if(ch !== ':' && !lessAnim()){ el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip'); } } });
+  }
+  tm._s = str;
+}
+function clack(delay){
+  if(!S.settings.sound || !AC) return;
+  try{
+    const t = AC.currentTime + (delay || 0), len = Math.floor(AC.sampleRate * .045);
+    const buf = AC.createBuffer(1, len, AC.sampleRate), d = buf.getChannelData(0);
+    for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4);
+    const src = AC.createBufferSource(), bp = AC.createBiquadFilter(), g = AC.createGain();
+    src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = 2800 + Math.random() * 1800; bp.Q.value = 2.5;
+    g.gain.value = .9 * S.settings.volume;
+    src.connect(bp).connect(g).connect(AC.destination); src.start(t);
+  }catch(e){}
+}
+function cardBack(){
+  return `<svg viewBox="0 0 70 100" aria-hidden="true"><rect x="1" y="1" width="68" height="98" rx="7" fill="#fbf8f1" stroke="#c9c2b0"/>
+    <rect x="6" y="6" width="58" height="88" rx="4" fill="#9b1c24"/>
+    <path d="M6 6 L64 94 M64 6 L6 94" stroke="#c43d45" stroke-width="1"/>
+    <g stroke="rgba(255,255,255,.18)" stroke-width="1">${Array.from({length:9}, (_, k) => `<path d="M${6 + k * 8} 6 L6 ${6 + k * 11}"/><path d="M${6 + k * 8} 94 L64 ${94 - (8 - k) * 11}"/>`).join('')}</g>
+    <rect x="6" y="6" width="58" height="88" rx="4" fill="none" stroke="#e2bd62" stroke-width="2"/>
+    <circle cx="35" cy="50" r="11" fill="#9b1c24" stroke="#e2bd62" stroke-width="2"/><text x="35" y="55" text-anchor="middle" font-size="14" fill="#e2bd62" font-family="Arial">♠</text></svg>`;
+}
+(function(){ const sh = $('#shuffle'); let h = '';
+  for(let i = 0; i < 8; i++) h += cardBack().replace('<svg', `<svg style="--i:${i};--s:${i % 2 ? 1 : -1}"`);
+  sh.innerHTML = h; })();
+function chipFlight(l, idx){
+  const pot = $('#banner .pot'); pot.innerHTML = '';
+  const flat = g => { const a = []; (g || []).forEach(x => { for(let k = 0; k < Math.min(x.n, 6); k++) a.push(x.c); }); return a; };
+  const sides = [{x:-1.35, chips:flat(payGroups(l.sb, idx)), lbl:'SB'}, {x:1.35, chips:flat(payGroups(l.bb, idx)), lbl:'BB'}];
+  if(!sides[0].chips.length && !sides[1].chips.length) return 0;
+  let n = 0, maxDelay = 0;
+  sides.forEach(side => {
+    const order = side.chips.slice().sort((a, b) => b.value - a.value);
+    order.forEach((c, j) => {
+      const el = document.createElement('div'); el.className = 'fly'; el.innerHTML = chipC(c);
+      pot.appendChild(el);
+      const size = el.getBoundingClientRect().width || 80;
+      const fx = side.x * size, fy = -j * size * .17;
+      const ang = Math.random() * Math.PI * 2, dist = Math.max(innerWidth, innerHeight) * .75;
+      const sx = Math.cos(ang) * dist, sy = Math.sin(ang) * dist, rot = (Math.random() * 2 - 1) * 540;
+      el.style.zIndex = 10 + j;
+      el.style.transform = `translate(${sx}px, ${sy}px) rotate(${rot}deg)`;
+      const delay = n * 0.09; n++;
+      el.style.transitionDelay = delay + 's';
+      requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transform = `translate(${fx}px, ${fy}px) rotate(${(Math.random() * 2 - 1) * 8}deg)`; }));
+      clack(delay + .55); maxDelay = delay;
+    });
+    const lb = document.createElement('div'); lb.className = 'plbl'; lb.textContent = side.lbl;
+    pot.appendChild(lb); requestAnimationFrame(() => { const sz = pot.querySelector('.fly')?.getBoundingClientRect().width || 80; lb.style.left = (side.x * sz) + 'px'; });
+  });
+  return maxDelay + .7;
+}
 
 /* ================= WAKE LOCK / PEŁNY EKRAN ================= */
 let wakeLock = null, wakeState = 'nieaktywna';
@@ -802,11 +932,11 @@ const money = v => `${fmt(v)} ${S.tour.currency}`;
 /* ================= RENDER EKRANU ================= */
 function render(){
   const c = S.clock, l = level(c.idx), n = level(c.idx + 1), rem = c.status === 'idle' ? durMs(c.idx) : remaining();
-  document.body.className = [S.settings.theme === 'dark' ? '' : S.settings.theme, c.status === 'paused' ? 'paused' : '', l.type === 'break' ? 'isbreak' : ''].join(' ');
+  document.body.className = [S.settings.theme === 'dark' ? '' : S.settings.theme, c.status === 'paused' ? 'paused' : '', l.type === 'break' ? 'isbreak' : '', c.status === 'running' && rem <= 10000 ? 'final' : '', S.settings.lessAnim ? 'lessanim' : ''].join(' ');
   $('#tname').textContent = S.tour.name;
   setHTML('#lvl', l.type === 'break' ? '<b>☕ Przerwa</b>' : `Poziom <b>${playNo(c.idx)}</b>${l.auto ? '' : ' z ' + totalPlayLevels()} · ${l.dur} min`);
   setHTML('#now', `${icon('clock')}${hhmm(now())}`);
-  const tm = $('#timer'); tm.textContent = mmss(rem);
+  const tm = $('#timer'); setTimer(mmss(rem));
   tm.className = c.status === 'running' && rem <= 10000 ? 'danger' : (c.status !== 'idle' && rem <= 60000 ? 'warn' : '');
   $('#bar i').style.width = (100 * Math.min(1, Math.max(0, 1 - rem / durMs(c.idx)))) + '%';
   setHTML('#bv', l.type === 'break' ? `<span class="bg">${chip('brk')}PRZERWA</span>`
@@ -1076,6 +1206,7 @@ function renderAdmin(){
         <label class="c"><input type="checkbox" data-bind="settings.sound" ${s.sound ? 'checked' : ''}> Sygnał zmiany poziomu (gong)</label>
         <label class="c"><input type="checkbox" data-bind="settings.voice" ${s.voice ? 'checked' : ''}> Komunikaty głosowe po polsku</label>
         <label class="c"><input type="checkbox" data-bind="settings.tick" ${s.tick ? 'checked' : ''}> Tykanie w ostatnich 5 sekundach</label>
+        <label class="c"><input type="checkbox" data-bind="settings.clockTick" ${s.clockTick ? 'checked' : ''}> Klikanie zegara co sekundę (jak tablica klapkowa)</label>
         <div class="row"><label class="f">Ostrzeżenie przed końcem poziomu (s, 0 = wył.)<input type="number" data-bind="settings.warnSec" value="${s.warnSec}"></label>
         <label class="f">Głośność<input type="range" min="0.05" max="1" step="0.05" data-bind="settings.volume" value="${s.volume}"></label></div>
         <div class="row"><label class="f">Głos lektora<select data-bind="settings.voiceName">
@@ -1091,6 +1222,7 @@ function renderAdmin(){
         <p class="note">Na iPhonie przełącznik wyciszenia blokuje dźwięk – ustaw go na dzwonek.</p>
       </div>
       <h3>Wygląd</h3>
+      <label class="c"><input type="checkbox" data-bind="settings.lessAnim" ${s.lessAnim ? 'checked' : ''}> Ogranicz animacje (słabszy tablet, oszczędzanie baterii)</label>
       <div class="row"><label class="f">Motyw<select data-bind="settings.theme">${[['dark','Zielone sukno (klasyczne)'],['blue','Niebieskie sukno'],['red','Bordowe sukno'],['light','Jasny'],['contrast','Wysoki kontrast']].map(([v, n]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
       <h3>PIN administratora</h3>
       <div class="row"><input type="password" inputmode="numeric" id="pin1" placeholder="Nowy PIN (4–6 cyfr)" style="flex:1 1 160px"><input type="password" inputmode="numeric" id="pin2" placeholder="Powtórz PIN" style="flex:1 1 160px"><button class="btn sm acc" id="pinSave">Zmień PIN</button></div>
