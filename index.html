@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Licznik">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Oswald:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Playfair+Display:wght@600;700&family=Oswald:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --felt:#11603e; --felt2:#06301f; --rail1:#7a4520; --rail2:#2a1408; --gold:#e2bd62; --gold2:#a9822f;
@@ -249,14 +249,30 @@ table.lv .acts button{background:none;border:1px solid var(--line);color:var(--f
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 18px;border-radius:12px;z-index:80;font-size:15px;display:none;max-width:90vw;text-align:center;border:1px solid var(--gold2)}
 
-/* ===== ZEGAR – PRZENIKANIE CYFR ===== */
-#timer .d{display:inline-block;transform-origin:50% 55%}
-#timer .c{display:inline-block;transform:translateY(-.04em)}
-#timer .d.flip{animation:fadein .5s cubic-bezier(.2,.7,.3,1)}
-@keyframes fadein{0%{opacity:0;transform:scale(1.35)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
-#timer.danger{animation:none} #timer.danger .d, #timer.danger .c{animation:pulse 1s infinite}
-#timer.danger .d.flip{animation:fadein .5s cubic-bezier(.2,.7,.3,1), pulse 1s infinite}
-#timer{white-space:nowrap}
+/* ===== ZEGAR – STYL EKSKLUZYWNY ===== */
+#timer{font-family:'Playfair Display', Georgia, serif;font-weight:700;font-variant-numeric:lining-nums tabular-nums;letter-spacing:.01em;white-space:nowrap;
+  text-shadow:none;filter:drop-shadow(0 .025em .02em rgba(0,0,0,.55));line-height:1}
+#timer .d{display:inline-block;color:transparent;-webkit-background-clip:text;background-clip:text;
+  background-image:linear-gradient(180deg,#fff8de 0%,#f3dc98 38%,#d6ab4c 62%,#a87a26 100%)}
+#timer.warn .d{background-image:linear-gradient(180deg,#ffe2b8 0%,#ffb35c 45%,#d9741a 100%)}
+#timer.danger{animation:none}
+#timer.danger .d{background-image:linear-gradient(180deg,#ffd0cc 0%,#ff6b5e 45%,#c8231a 100%)}
+#timer .c{display:inline-flex;flex-direction:column;justify-content:center;gap:.2em;margin:0 .07em;vertical-align:middle;height:1em;transform:translateY(-.06em)}
+#timer .c i{display:block;width:.1em;height:.1em;background:linear-gradient(135deg,#fff3c4,var(--gold) 50%,var(--gold2));transform:rotate(45deg);animation:breathe 2.4s ease-in-out infinite}
+#timer.warn .c i{background:#ffb35c} #timer.danger .c i{background:#ff6b5e}
+body.paused #timer .c i, body.lessanim #timer .c i{animation:none}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+body.light #timer .d{background-image:linear-gradient(180deg,#5a420f 0%,#8a6200 55%,#5e4300 100%)}
+body.light #timer{filter:none}
+body.contrast #timer .d{background:none;color:#fff} body.contrast #timer.warn .d{color:var(--warn)} body.contrast #timer.danger .d{color:var(--danger)}
+#timer{font-size:min(27vw,30vh)}
+@media (orientation:landscape) and (min-width:700px){ #timer{font-size:min(17.5vw,37vh)} }
+/* cienka złota linia postępu z rombem */
+#bar{height:3px;background:rgba(226,189,98,.18);overflow:visible;box-shadow:none;border-radius:0;margin:2.4vmin 0 2.4vmin}
+#bar i{position:relative;background:linear-gradient(90deg,transparent,var(--gold2) 15%,var(--gold));animation:none;border-radius:0}
+#bar i::after{content:'';position:absolute;right:-6px;top:50%;width:11px;height:11px;margin-top:-5.5px;transform:rotate(45deg);
+  background:linear-gradient(135deg,#fff3c4,var(--gold));box-shadow:0 0 10px color-mix(in srgb,var(--gold) 70%,transparent)}
+#timer.danger ~ #bar i{background:linear-gradient(90deg,transparent,#c8231a 15%,#ff6b5e)}
 
 /* ===== PULSUJĄCY RANT W OSTATNICH 10 S ===== */
 #screen::after{content:'';position:absolute;inset:calc(-1 * clamp(10px,2.2vmin,24px));border-radius:inherit;pointer-events:none;opacity:0;
@@ -818,10 +834,12 @@ function setTimer(str){
   const tm = $('#timer');
   if(tm._s === str) return;
   if(!tm._s || tm._s.length !== str.length){
-    tm.innerHTML = [...str].map(ch => ch === ':' ? '<span class="c">:</span>' : `<span class="d">${ch}</span>`).join('');
+    tm.innerHTML = [...str].map(ch => ch === ':' ? '<span class="c" aria-hidden="true"><i></i><i></i></span>' : `<span class="d">${ch}</span>`).join('');
+    tm.setAttribute('aria-label', str);
   }else{
-    [...str].forEach((ch, i) => { const el = tm.children[i]; if(el.textContent !== ch){ el.textContent = ch;
-      if(ch !== ':' && !lessAnim()){ el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip'); } } });
+    [...str].forEach((ch, i) => { const el = tm.children[i]; if(ch !== ':' && el.textContent !== ch){ el.textContent = ch;
+} });
+    tm.setAttribute('aria-label', str);
   }
   tm._s = str;
 }
