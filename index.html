@@ -203,6 +203,9 @@ table.lv th{font-size:12px;color:var(--muted);text-align:left;padding:6px 4px;fo
 table.lv th .chip{font-size:16px;margin-right:4px}
 table.lv td{padding:4px;border-top:1px solid var(--line)}
 table.lv input{padding:8px 6px;min-width:48px}
+table.lv select{padding:8px 4px;min-width:78px;font-family:var(--num);font-size:16px}
+table.lv select.bad{border-color:var(--warn);color:var(--warn)}
+table.lv .zw .chip{margin-right:1px}
 table.lv tr.cur td{background:color-mix(in srgb,var(--gold) 18%,transparent)}
 table.lv tr.past td{opacity:.5}
 table.lv .ix{font-family:var(--num);font-size:16px;white-space:nowrap}
@@ -521,6 +524,51 @@ function renderChipsTab(b){
   b.querySelectorAll('[data-per]').forEach(inp => inp.onchange = () => { S.chips.per = {...(S.chips.per || {}), [inp.dataset.per]: Math.max(0, +inp.value || 0)}; save(); renderAdmin(); });
 }
 
+
+/* ===== Stawki dopasowane do dostępnych żetonów ===== */
+function smallChip(){ const s2 = chipSet(); return s2.length ? s2[0].value : (S.structure.chip || 25); }
+function allowedValues(){
+  const sm = smallChip(), set = chipSet();
+  const maxLvl = Math.max(0, ...S.structure.levels.filter(l => l.type === 'play').map(l => Math.max(l.bb, l.ante || 0)));
+  const maxV = Math.max((set.length ? set[set.length - 1].value : sm) * 200, maxLvl * 2);
+  const vals = new Set(set.map(c => c.value));
+  for(let k = 1; k <= 12; k++) vals.add(sm * k);
+  [1,1.2,1.25,1.5,2,2.5,3,4,5,6,7.5,8].forEach(m => { for(let e = 0; e <= 8; e++) vals.add(Math.round(m * Math.pow(10, e))); });
+  return [...vals].filter(v => v >= sm && v <= maxV && v % sm === 0).sort((a, b) => a - b);
+}
+const validVal = v => !v || v % smallChip() === 0;
+function levelOk(l){ return l.type !== 'play' || ([l.sb, l.bb, l.ante || 0].every(validVal) && l.sb > 0 && l.bb >= l.sb); }
+function activeChipsAt(i){ // żetony w grze na danym poziomie (po wymianach na przerwach)
+  const removed = new Set(); colorUps().forEach(cu => { if(cu.at < i) cu.remove.forEach(c => removed.add(c.value)); });
+  return chipSet().filter(c => !removed.has(c.value));
+}
+function fitLevels(){
+  const sm = smallChip(), opts = allowedValues(), bbOpts = opts.filter(v => v % (2 * sm) === 0 || v === sm * 2);
+  let prev = 0, changed = 0, removed = 0;
+  const out = [];
+  S.structure.levels.forEach(l => {
+    if(l.type !== 'play'){ if(out.length && out[out.length - 1].type === 'break') { removed++; return; } out.push(l); return; }
+    const before = JSON.stringify(l), anteWasBB = l.ante && l.ante === l.bb;
+    const bb = bbOpts.reduce((a, v) => Math.abs(v - l.bb) < Math.abs(a - l.bb) ? v : a, bbOpts[0]);
+    if(bb <= prev){ removed++; return; } // po zaokrągleniu taki sam jak poprzedni – zbędny poziom
+    l.bb = bb; l.sb = sbOf(bb, sm); prev = bb;
+    if(l.ante) l.ante = anteWasBB ? bb : Math.max(sm, Math.round(l.ante / sm) * sm);
+    if(JSON.stringify(l) !== before) changed++;
+    out.push(l);
+  });
+  while(out.length > 1 && out[0].type === 'break'){ out.shift(); removed++; }
+  S.structure.levels = out;
+  if(S.clock.idx >= out.length) S.clock.idx = out.length - 1;
+  return {changed, removed};
+}
+function valSelect(i, f, val){
+  const opts = allowedValues(); let html = '';
+  if(f === 'ante') html += `<option value="0" ${!val ? 'selected' : ''}>–</option>`;
+  if(val && !opts.includes(val)) html += `<option value="${val}" selected>${fmt(val)} ⚠</option>`;
+  html += opts.map(v => `<option value="${v}" ${v === val ? 'selected' : ''}>${fmt(v)}</option>`).join('');
+  return `<select data-l="${i}" data-f="${f}" data-old="${val}" class="${val && !validVal(val) ? 'bad' : ''}">${html}</select>`;
+}
+
 /* ================= STAN ================= */
 function defaultState(){
   return {
@@ -535,6 +583,7 @@ function defaultState(){
   };
 }
 let S = load() || defaultState();
+try{ const cs = (S.chips.set || []).filter(c => c.value > 0).map(c => c.value); if(cs.length) S.structure.chip = Math.min(...cs); }catch(e){}
 function load(){
   try{
     const raw = localStorage.getItem(KEY); if(!raw) return null;
@@ -885,18 +934,24 @@ function renderAdmin(){
         <label class="f">Wszystkie poziomy gry (min)<input type="number" id="allDur" placeholder="np. 20"></label>
         <button class="btn sm" id="allDurBtn" style="align-self:flex-end">Ustaw</button>
         <label class="f">Mnożnik po ostatnim poziomie<input type="number" step="0.1" data-bind="structure.factor" value="${S.structure.factor}"></label>
-        <label class="f">Najmniejszy żeton<input type="number" data-bind="structure.chip" value="${S.structure.chip}"></label>
       </div>
-      <div style="overflow-x:auto"><table class="lv"><thead><tr><th>#</th><th>${chip('sb')}SB</th><th>${chip('bb')}BB</th><th>${chip('ante')}Ante</th><th>Min</th><th></th></tr></thead><tbody>
+      <div class="card" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+        <span style="font-size:30px;display:inline-flex;gap:4px">${chipSet().map(chipC).join('')}</span>
+        <span class="note" style="flex:1 1 200px">Stawki wybierasz z listy wartości, które da się zapłacić Twoimi żetonami (wielokrotności ${smallChip()}). Zestaw zmienisz w zakładce 🪙 Żetony.</span>
+        <button class="btn sm acc" id="fitBtn">🪙 Dopasuj poziomy do żetonów</button>
+      </div>
+      ${(() => { const bad = L.filter(l => !levelOk(l)).length; return bad ? `<p class="note" style="color:var(--warn)">⚠ ${bad} poziom(ów) ma stawki, których nie da się zapłacić Twoimi żetonami – kliknij „Dopasuj poziomy do żetonów”.</p>` : ''; })()}
+      <div style="overflow-x:auto"><table class="lv"><thead><tr><th>#</th><th>${chip('sb')}SB</th><th>${chip('bb')}BB</th><th>${chip('ante')}Ante</th><th>Min</th><th>Żetony w grze</th><th></th></tr></thead><tbody>
       ${L.map((l, i) => { const cls = i === c.idx ? 'cur' : (i < c.idx && c.status !== 'idle' ? 'past' : '');
         if(l.type === 'break') return `<tr class="brk ${cls}"><td class="ix">☕</td><td colspan="3"><input type="text" data-l="${i}" data-f="note" value="${esc(l.note || '')}" placeholder="Przerwa – notatka"></td>
-          <td><input type="number" data-l="${i}" data-f="dur" value="${l.dur}"></td><td class="acts">${acts(i)}</td></tr>`;
+          <td><input type="number" data-l="${i}" data-f="dur" value="${l.dur}"></td><td class="note" style="font-size:12px;white-space:nowrap">${(() => { const cu = colorUps().find(x => x.at === i); return cu ? '<span class="cu" style="font-size:13px">' + colorUpHTML(cu).replace('<span class="cu">', '') : ''; })()}</td><td class="acts">${acts(i)}</td></tr>`;
         pn++; return `<tr class="${cls}"><td class="ix">${pn}</td>
-          <td><input type="number" data-l="${i}" data-f="sb" value="${l.sb}"></td><td><input type="number" data-l="${i}" data-f="bb" value="${l.bb}"></td>
-          <td><input type="number" data-l="${i}" data-f="ante" value="${l.ante || 0}"></td><td><input type="number" data-l="${i}" data-f="dur" value="${l.dur}"></td><td class="acts">${acts(i)}</td></tr>`; }).join('')}
+          <td>${valSelect(i, 'sb', l.sb)}</td><td>${valSelect(i, 'bb', l.bb)}</td>
+          <td>${valSelect(i, 'ante', l.ante || 0)}</td><td><input type="number" data-l="${i}" data-f="dur" value="${l.dur}"></td>
+          <td class="zw" style="white-space:nowrap;font-size:20px">${activeChipsAt(i).map(chipC).join('')}</td><td class="acts">${acts(i)}</td></tr>`; }).join('')}
       </tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="btn sm" id="addL">+ Poziom</button><button class="btn sm" id="addB">+ Przerwa</button></div>
-      <p class="note">Zmiany działają od razu, także w trakcie gry. Po ostatnim poziomie stawki rosną automatycznie ×${S.structure.factor}, więc turniej nigdy się nie zatrzyma. Wpisanie BB automatycznie podpowiada SB.</p>
+      <p class="note">Zmiany działają od razu, także w trakcie gry. Po ostatnim poziomie stawki rosną automatycznie ×${S.structure.factor}, więc turniej nigdy się nie zatrzyma. Wybranie BB automatycznie ustawia SB (połowa BB), a ante typu big blind ante idzie razem z BB. Kolumna „Żetony w grze” pokazuje, które kolory są jeszcze na stole – po wymianach na przerwach znikają najmniejsze.</p>
     </div>`;
     function acts(i){ return `<button data-mv="${i}" data-d="-1">↑</button><button data-mv="${i}" data-d="1">↓</button><button data-dup="${i}">⧉</button><button data-del="${i}">✕</button>`; }
     $('#tplLoad').onclick = async () => { const k = $('#tpl').value; if(!(await ask(`Wczytać szablon „${TEMPLATES[k].name}”? Obecna struktura zostanie zastąpiona.`, 'Wczytaj'))) return;
@@ -906,15 +961,16 @@ function renderAdmin(){
       if(!(await ask('Zastąpić obecną strukturę wygenerowaną?', 'Generuj'))) return;
       S.structure.levels = generate(o); S.tour.stack = o.stack; save(); renderAdmin(); render(); toast('Struktura wygenerowana'); };
     $('#allDurBtn').onclick = () => { const v = +$('#allDur').value; if(!(v > 0)) return; S.structure.levels.forEach(l => { if(l.type === 'play') l.dur = v; }); save(); renderAdmin(); render(); };
-    $('#addL').onclick = () => { const last = [...L].reverse().find(l => l.type === 'play') || P(25,50,0,15); const bb = niceRound(last.bb * 1.5, S.structure.chip);
-      L.push(P(sbOf(bb, S.structure.chip), bb, last.ante ? bb : 0, last.dur)); save(); renderAdmin(); render(); };
+    $('#addL').onclick = () => { const last = [...L].reverse().find(l => l.type === 'play') || P(25,50,0,15); const bb = niceRound(last.bb * 1.5, smallChip() * 2);
+      L.push(P(sbOf(bb, smallChip()), bb, last.ante ? bb : 0, last.dur)); save(); renderAdmin(); render(); };
     $('#addB').onclick = () => { L.push(B(10)); save(); renderAdmin(); render(); };
-    b.querySelectorAll('input[data-l]').forEach(inp => inp.onchange = () => {
+    $('#fitBtn').onclick = async () => { if(!(await ask('Zaokrąglić wszystkie stawki do wartości, które da się zapłacić Twoimi żetonami?', 'Dopasuj'))) return; const r = fitLevels(); save(); renderAdmin(); render(); toast(r.changed || r.removed ? `Dopasowano ${r.changed} poziom(ów)${r.removed ? ', usunięto ' + r.removed + ' zdublowanych' : ''}` : 'Wszystkie poziomy już pasują'); };
+    b.querySelectorAll('[data-l]').forEach(inp => inp.onchange = () => {
       const l = L[+inp.dataset.l], f = inp.dataset.f;
       l[f] = f === 'note' ? inp.value : Math.max(0, +inp.value || 0);
       if(f === 'dur' && !l.dur) l.dur = 1;
-      if(f === 'bb'){ l.sb = sbOf(l.bb, S.structure.chip); const sbi = inp.closest('tr').querySelector('[data-f="sb"]'); if(sbi) sbi.value = l.sb; }
-      save(); render();
+      if(f === 'bb'){ const oldAnte = l.ante; l.sb = sbOf(l.bb, smallChip()); if(oldAnte && L.indexOf(l) >= 0 && oldAnte === +inp.dataset.old) l.ante = l.bb; }
+      save(); if(['sb','bb','ante'].includes(f)) renderAdmin(); render();
     });
     b.querySelectorAll('[data-mv]').forEach(x => x.onclick = () => { const i = +x.dataset.mv, j = i + +x.dataset.d; if(j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; save(); renderAdmin(); render(); });
     b.querySelectorAll('[data-dup]').forEach(x => x.onclick = () => { const i = +x.dataset.dup; L.splice(i + 1, 0, clone(L[i])); save(); renderAdmin(); render(); });
